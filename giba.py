@@ -440,72 +440,72 @@ usage="Orient B-field: "+sys.argv[0]+" -o atom1 atom2 atom3\n Other uses: "+sys.
 parser = OptionParser(usage=usage)
 
 parser.add_option("--fake", action="store_true", dest="fake", default=False,
-                  help="Set, but don't run the gimic calculations, not valid for analyses runs")
+				help="Set, but don't run the gimic calculations, not valid for analyses runs")
 
 parser.add_option("-L", "--lazy", action="store_true",
-                  dest="lazy", default=False,
-                  help="asks only for three atoms and does everything automatically")
+				dest="lazy", default=False,
+				help="asks only for three atoms and does everything automatically")
 
 #This one is not really an option since is the default procedure if no other options are present.
 parser.add_option("-A", "--analyze", action="store_true",
-                  dest="analyze", default=True,
-                  help="Analyze results from gimic calibration trials ran with this program. Default behavior")
+				dest="analyze", default=True,
+				help="Analyze results from gimic calibration trials ran with this program. Default behavior")
 
 parser.add_option("-F", "--field-angle", action="store_true",
-                  dest="fieldscan", default=False,
-                  help="Scans different angles for B-field")
+				dest="fieldscan", default=False,
+				help="Scans different angles for B-field")
 
 parser.add_option("-D", "--distances", action="store_true",
-                  dest="rundistances", default=False,
-                  help="Set and execute calibration gimic runs setting integration plane in different points along a bond at constant plane size")
+				dest="rundistances", default=False,
+				help="Set and execute calibration gimic runs setting integration plane in different points along a bond at constant plane size")
 
 parser.add_option("-H", "--height", action="store_true",
-                  dest="runheights", default=False,
-                  help="Set and execute calibration runs in slices covering plane height from -5.0 to 5.0 a.u. at constant position and width")
+				dest="runheights", default=False,
+				help="Set and execute calibration runs in slices covering plane height from -5.0 to 5.0 a.u. at constant position and width")
 
 parser.add_option("-W", "--width", action="store_true",
-                  dest="runwidth", default=False,
-                  help="Set and execute calibration runs in slices covering plane width from -5.0 to 5.0 a.u. at constant position and height")
+				dest="runwidth", default=False,
+				help="Set and execute calibration runs in slices covering plane width from -5.0 to 5.0 a.u. at constant position and height")
 
 parser.add_option("-O", "--orient-field", action="store_true",
-                  dest="orient_field", default=False,
-                  help="Set the B field in gimic input so is paralel to a molecular plane defined by 3 atoms")
+				dest="orient_field", default=False,
+				help="Set the B field in gimic input so is paralel to a molecular plane defined by 3 atoms")
 
 parser.add_option("-c", "--currents", action="store_true",
-                  dest="module", default=False,
-                  help="use currents, not modules, in analyses (used with option -A). Default False")
+				dest="module", default=False,
+				help="use currents, not modules, in analyses (used with option -A). Default False")
 
 parser.add_option("-t", "--threshold", action="store", type="float",
-                  dest="threshold", default=0.01,
-                  help="Maximun difference allowed between positive and negative contributions to the current in a.u. Used with option -A. Default 0.001")
+				dest="threshold", default=0.01,
+				help="Maximun difference allowed between positive and negative contributions to the current in a.u. Used with option -A. Default 0.001")
 
 parser.add_option("-l", "--bond-lenght", action="store", type="float",
-                  dest="bondleng", default=4.0,
-                  help="Lenght of the bond to scan, in a.u. Used with option -D. Default 2.6")
+				dest="bondleng", default=4.0,
+				help="Lenght of the bond to scan, in a.u. Used with option -D. Default 2.6")
 
 #parser.add_option("-n", "--number-of-steps", action="store", type="int",
-#                  dest="nsteps", default=30,
-#                  help="Number of steps in the bond scan if using -D or -F. Default 20")                 
+#				dest="nsteps", default=30,
+#				help="Number of steps in the bond scan if using -D or -F. Default 20")                 
 
 parser.add_option("-s", "--step-lengh", action="store", type="float",
-                  dest="steplen", default=0.1,
-                  help="Lenght of the step for slice, distance andangle scans in a.u. or radians Used with options -H and -W. Default 0.1.")
+				dest="steplen", default=0.1,
+				help="Lenght of the step for slice, distance andangle scans in a.u. or radians Used with options -H and -W. Default 0.1.")
 
 parser.add_option("-a", "--angle", action="store", type="float",
-                  dest="angle", default=0.0,
-                  help="Angle of the final b field (radians).  Used with option -O. Default 0, paralell to the molecule plane.")
+				dest="angle", default=0.0,
+				help="Angle of the final b field (radians).  Used with option -O. Default 0, paralell to the molecule plane.")
 
 parser.add_option("-j", "--job-script", action="store",
-                  dest="jobscript", default="job.cmd",
-                  help="Jobscript for runing gimic calculations in the qsub system. Used with options -D, -H and -W. Default job.cmd")
+				dest="jobscript", default="job.cmd",
+				help="Jobscript for runing gimic calculations in the qsub system. Used with options -D, -H and -W. Default job.cmd")
 
 parser.add_option("--job-system", action="store",
-                  dest="jobsystem", default="gimic",
-                  help="Type of queuing system. Supported: sbatch, qsub, gimic (i.e none). Default gimic")
-                  
+				dest="jobsystem", default="gimic",
+				help="Type of queuing system. Supported: sbatch, qsub, gimic (i.e none). Default gimic")
+				
 parser.add_option("--group", action="store",
-                  dest="group", default="d_",
-                  help="To be used with option -A. Group to be analyzed: 'd_', 'a_', 'h_' or 'w_' for distance, angle, height or width, respectively")
+				dest="group", default="d_",
+				help="To be used with option -A. Group to be analyzed: 'd_', 'a_', 'h_' or 'w_' for distance, angle, height or width, respectively")
 
 
 (options, args) = parser.parse_args()
