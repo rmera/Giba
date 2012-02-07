@@ -481,7 +481,7 @@ parser.add_option("-t", "--threshold", action="store", type="float",
 
 parser.add_option("-l", "--bond-lenght", action="store", type="float",
 				dest="bondleng", default=4.0,
-				help="Lenght of the bond to scan, in a.u. Used with option -D. Default 2.6")
+				help="Lenght of the bond to scan, in a.u. Used with option -D. Default 4")
 
 #parser.add_option("-n", "--number-of-steps", action="store", type="int",
 #				dest="nsteps", default=30,
