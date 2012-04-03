@@ -551,7 +551,7 @@ elif options.fieldscan:
 	
 elif options.orient_field:
 	status=orient_magnetic_field(int(args[0]),int(args[1]),int(args[2]), options.angle)
-	if status:
+	if status.any():
 		print "The magnetic field has been set so it is perpendicular to the bond in study",
 		print "(first two parameters) but paralell to the plane of the molecule as defined ",
 		print "by the three atoms given. "
