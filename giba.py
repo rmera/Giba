@@ -32,6 +32,10 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 
+
+au2nat=28.179409
+nat2au=1.0/au2nat
+
 def setgimicfiles(namedir,command):
 	if command.startswith("qsub") or command.startswith("sbatch"):
 		shutil.copy("./"+command.split()[1],namedir)
@@ -42,11 +46,10 @@ def setgimicfiles(namedir,command):
 	
 
 #makes sample slices for with or 
-def slices(woh,step,job,fake):
-	llimit=-5.0
+def slices(woh,step,llimit=-5.0,rbound=5.0,job="gimic > gimic.out",fake=False):
 	rlimit=llimit+step
 	cont=0
-	while(rlimit<=5.0):
+	while(rlimit<=rbound):
 		founddistance=False
 		namedir=woh+"_%04d_%3.1fT%3.1f"%(cont,llimit,rlimit)
 		os.mkdir(namedir)
@@ -55,11 +58,13 @@ def slices(woh,step,job,fake):
 		fin=open("../gimic.inp","r")
 		fout=open("gimic.inp","w")
 		for i in fin:
+			if i.startswith("#"):  #Newly added
+				continue
 			if i.lstrip(" ").lstrip("\n").startswith("width") and woh=="w":
-				fout.write("      width=[%3.1f,%3.1f]       \n"%(llimit,rlimit))
+				fout.write("     width=[%3.1f,%3.1f]       \n"%(llimit,rlimit))
 				founddistance=True
 			elif i.lstrip(" ").lstrip("\n").startswith("height") and woh=="h":
-				fout.write("      height=[%3.1f,%3.1f]       \n"%(llimit,rlimit))
+				fout.write("     height=[%3.1f,%3.1f]       \n"%(llimit,rlimit))
 				founddistance=True		
 			else:
 				fout.write(i)
@@ -94,8 +99,10 @@ def distances(leng,step,job,fake):
 		fin=open("../gimic.inp","r")
 		fout=open("gimic.inp","w")
 		for i in fin:
+			if i.startswith("#"):  #Newly added
+				continue
 			if i.lstrip(" ").lstrip("\n").startswith("distance"):
-				fout.write("        distance=%7.6f        # place grid 'distance' between atoms\n"%distance)
+				fout.write("     distance=%7.6f        # place grid 'distance' between atoms\n"%distance)
 				founddistance=True
 			else:
 				fout.write(i)
@@ -115,7 +122,7 @@ def distances(leng,step,job,fake):
 #gets currents or mod currents in a.u. from a file called "gimic.out" which must exist in the current directory
 #if positive or negative contributions differ by more than the given threshold, raises ValueError exception.
 #returns both positive and negative values for the currents.
-def get_current(curr=False,threshold=0.001):
+def get_current(curr=False,threshold=0.01):
 	ReadingCurrents=False
 	positive=0.0
 	negative=0.0
@@ -138,21 +145,27 @@ def get_current(curr=False,threshold=0.001):
 		passed=0
 	return positive,negative,passed
 	
+
 #plots positive and negative currents against something. labelx is the label for that something			
-def plot_currents(x,ypos,yneg,yerr,labelx):
+def plot_currents(x,ypos,yneg,yerr,labelx,nanoamperes=False):
+	conversion=1
+	units=(" (a.u.)")
+	if nanoamperes:
+		units=" (nA/T)"
+		conversion=au2nat #au to nA/T
 	plt.figure(1)
 	plt.subplot(211)
-	plt.plot(x,ypos,"r")
-	plt.plot(x,yerr,"ko")
+	plt.plot(x,conversion*ypos,"b")
+	plt.plot(x,conversion*yerr,"ko")
 	plt.title("Currents Vs "+labelx)
 	plt.xlabel(labelx+" (a.u.)")
-	plt.ylabel("Positive currents (a.u.)")
+	plt.ylabel("Positive currents"+units)
 	plt.subplot(212)
-	plt.plot(x,yneg,"b")
+	plt.plot(x,conversion*yneg,"r")
 	yerr2=-1*yerr
-	plt.plot(x,yerr2,"ko")
+	plt.plot(x,conversion*yerr2,"ko")
 	plt.xlabel(labelx+" (a.u.)")
-	plt.ylabel("Negative currents (a.u).")
+	plt.ylabel("Negative currents"+units)
 	labelx.rstrip("(radians)") #remove this part from the image name for the B-field scan
 	name="".join(labelx.split())
 	plt.savefig(name)
@@ -201,12 +214,14 @@ def orient_magnetic_field(a1,a2,a3,angle):
 	Pvector=np.cross(bond,Tvector)
 	Finalvec=coeff*Tvector + (1-coeff)*Pvector  
 	Finalvec=Finalvec/np.linalg.norm(Finalvec) #unitarize the vector
-	vectorline="        magnet=[%4.2f, %4.2f, %4.2f]  \n"%(Finalvec[0],Finalvec[1],Finalvec[2])
+	vectorline="magnet=[%4.2f, %4.2f, %4.2f]  \n"%(Finalvec[0],Finalvec[1],Finalvec[2])
 	fin=open("gimic.inp","r")
 	r=fin.readlines()
 	fin.close()
 	fout=open("gimic.inp","w")
 	for i in r:
+		if i.startswith("#"):  #Newly added
+			continue
 		if "magnet=[" in i:
 			fout.write(vectorline)
 		else:
@@ -223,7 +238,9 @@ def orient_magnetic_field(a1,a2,a3,angle):
 #is larger than the given threshold.
 #argument key indicates wether bond distances, width slices or height slices are being measured. Its value must
 #be of "_d", "_w" or "_h" in each respective case.
-def analize_distances(key,mod=True,threshold=0.001):
+def analize_distances(key,mod=True,threshold=0.01,nanoamperes=False):
+	if nanoamperes:
+		threshold=threshold*nat2au
 	positives=[] #positive currents
 	negatives=[] 
 	errors=[]  #zeroes when positive+negative<threshold, ==positive otherwise
@@ -285,7 +302,7 @@ def analize_distances(key,mod=True,threshold=0.001):
 		xlabel = "Width slices"
 	else:
 		xlabel = "Height slices"
-	plot_currents(darray,parray,narray,maskearray,xlabel)
+	plot_currents(darray,parray,narray,maskearray,xlabel,nanoamperes)
 	return dist_smallest
 
 
@@ -337,7 +354,7 @@ def analize_field(mod=True,threshold=0.01):
 #handles plotting of bfields obtained with this same program. In addition, it returns the angle
 #at which (one of the) the minimun value for the positive contribution occurs (which in principle should be used 
 #for calculations).  Is a bit more readable than the old analyze_all
-def analyze_all_pretty(mod, threshold, toanali,refatom):
+def analyze_all_pretty(mod, threshold, toanali,refatom,nanoamperes=False):
 	for j in toanali:
 		if j=="a_":  #this one is handled rather differently
 			smallest=analize_field(mod,threshold)
@@ -358,7 +375,7 @@ def analyze_all_pretty(mod, threshold, toanali,refatom):
 		else:
 			turn="Distances"
 			search="distance="
-		smallest=analize_distances(j,mod,threshold)
+		smallest=analize_distances(j,mod,threshold,nanoamperes)
 		if smallest==9999999: #most likely, the results were not there
 			continue
 		print "Analizing", turn
@@ -495,6 +512,15 @@ parser.add_option("-a", "--angle", action="store", type="float",
 				dest="angle", default=0.0,
 				help="Angle of the final b field (radians).  Used with option -O. Default 0, paralell to the molecule plane.")
 
+parser.add_option("--llimit", action="store",
+				dest="llimit", default=-5.0,
+				help="rleft limit for a slice scan. Default -5.0")
+
+parser.add_option("--rlimit", action="store",
+				dest="rlimit", default=5.0,
+				help="right limit for a slice scan. Default 5.0")
+
+
 parser.add_option("-j", "--job-script", action="store",
 				dest="jobscript", default="job.cmd",
 				help="Jobscript for runing gimic calculations in the qsub system. Used with options -D, -H and -W. Default job.cmd")
@@ -507,6 +533,9 @@ parser.add_option("--group", action="store",
 				dest="group", default="d_",
 				help="To be used with option -A. Group to be analyzed: 'd_', 'a_', 'h_' or 'w_' for distance, angle, height or width, respectively")
 
+parser.add_option("--nA", action="store_true",
+				dest="nanoamperes", default=False,
+				help="Use nA/T as units in the plots instead of a.u. Only for analysis. Default False.")
 
 (options, args) = parser.parse_args()
 
@@ -538,11 +567,11 @@ if options.rundistances:
 
 elif options.runheights:
 	os.system("rm -R h_*")
-	slices("h",options.steplen,command, options.fake)
+	slices("h",options.steplen,options.llimit,options.rlimit, command, options.fake)
 
 elif options.runwidth:
 	os.system("rm -R w_*")
-	slices("w",options.steplen,command, options.fake)
+	slices("w",options.steplen,options.llimit,options.rlimit, command, options.fake)
 
 
 elif options.fieldscan:
@@ -582,8 +611,8 @@ elif options.analyze:
 	else:
 		print "Angles"
 		refatoms=(int(args[0]),int(args[1]),int(args[2]))
-	print options.group
-	analyze_all_pretty(options.module,options.threshold,[options.group],refatoms)
+	print options.group, options.nanoamperes
+	analyze_all_pretty(options.module,options.threshold,[options.group],refatoms,options.nanoamperes)
 	
 
 	
