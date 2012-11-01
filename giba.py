@@ -156,19 +156,24 @@ def plot_currents(x,ypos,yneg,yerr,labelx,nanoamperes=False):
 		units=" (nA/T)"
 		conversion=au2nat #au to nA/T
 	plt.figure(1)
-	plt.subplot(211)
+	plt.subplot(311)
 	plt.plot(x,conversion*ypos,"b")
 	#plt.plot(x,conversion*yerr,"ko")
 	plt.title("Currents Vs "+labelx)
 	plt.xlabel(labelx+" (a.u.)")
 	plt.ylabel("Positive currents"+units)
-	plt.subplot(212)
+	plt.subplot(312)
 	plt.plot(x,conversion*yneg,"r")
 	yerr2=-1*yerr
 	plt.plot(x,conversion*yerr2,"ko")
 	plt.xlabel(labelx+" (a.u.)")
 	plt.ylabel("Negative currents"+units)
 	labelx.rstrip("(radians)") #remove this part from the image name for the B-field scan
+	plt.subplot(313)
+	plt.plot(x,conversion*(yneg+ypos),"g")
+	plt.axhline(0, color='black', lw=2)
+	plt.xlabel(labelx+" (a.u.)")
+	plt.ylabel("Total currents"+units)
 	name="".join(labelx.split())
 	plt.savefig(name)
 	return True
