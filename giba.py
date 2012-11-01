@@ -46,7 +46,9 @@ def setgimicfiles(namedir,command):
 	
 
 #makes sample slices for with or 
-def slices(woh,step,llimit=-5.0,rbound=5.0,job="gimic > gimic.out",fake=False):
+def slices(woh,step=0.1,llimit=-5.0,rbound=5.0,job="gimic > gimic.out",fake=False):
+	stup="0.1"
+	print llimit, step,stup
 	rlimit=llimit+step
 	cont=0
 	while(rlimit<=rbound):
@@ -156,7 +158,7 @@ def plot_currents(x,ypos,yneg,yerr,labelx,nanoamperes=False):
 	plt.figure(1)
 	plt.subplot(211)
 	plt.plot(x,conversion*ypos,"b")
-	plt.plot(x,conversion*yerr,"ko")
+	#plt.plot(x,conversion*yerr,"ko")
 	plt.title("Currents Vs "+labelx)
 	plt.xlabel(labelx+" (a.u.)")
 	plt.ylabel("Positive currents"+units)
@@ -571,7 +573,7 @@ elif options.runheights:
 
 elif options.runwidth:
 	os.system("rm -R w_*")
-	slices("w",options.steplen,options.llimit,options.rlimit, command, options.fake)
+	slices("w",options.steplen,float(options.llimit),float(options.rlimit), command, options.fake)
 
 
 elif options.fieldscan:
