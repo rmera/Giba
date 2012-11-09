@@ -149,31 +149,38 @@ def get_current(curr=False,threshold=0.01):
 	
 
 #plots positive and negative currents against something. labelx is the label for that something			
-def plot_currents(x,ypos,yneg,yerr,labelx,nanoamperes=False):
+def plot_currents(x,ypos,yneg,yerr,labelx,nanoamperes=False,total=False):
+	plots=211
+	if total:
+		plots=311
+		plt.figure(1,figsize=(12, 8))
+	else:
+		plt.figure(1)
 	conversion=1
 	units=(" (a.u.)")
 	if nanoamperes:
 		units=" (nA/T)"
 		conversion=au2nat #au to nA/T
-	plt.figure(1)
-	plt.subplot(311)
+
+	plt.subplot(plots)
 	plt.plot(x,conversion*ypos,"b")
 	#plt.plot(x,conversion*yerr,"ko")
-	plt.title("Currents Vs "+labelx)
-	plt.xlabel(labelx+" (a.u.)")
-	plt.ylabel("Positive currents"+units)
-	plt.subplot(312)
+	plt.title("Currents"+units+" Vs "+labelx+" (a.u.)")
+	#plt.xlabel(labelx)
+	plt.ylabel("Positive currents")
+	plt.subplot(plots+1)
 	plt.plot(x,conversion*yneg,"r")
 	yerr2=-1*yerr
 	plt.plot(x,conversion*yerr2,"ko")
-	plt.xlabel(labelx+" (a.u.)")
-	plt.ylabel("Negative currents"+units)
+	#plt.xlabel(labelx)
+	plt.ylabel("Negative currents")
 	labelx.rstrip("(radians)") #remove this part from the image name for the B-field scan
-	plt.subplot(313)
-	plt.plot(x,conversion*(yneg+ypos),"g")
-	plt.axhline(0, color='black', lw=2)
-	plt.xlabel(labelx+" (a.u.)")
-	plt.ylabel("Total currents"+units)
+	if total:
+		plt.subplot(313)
+		plt.plot(x,conversion*(yneg+ypos),"g")
+		plt.axhline(0, color='black', lw=2)
+		plt.xlabel(labelx)
+		plt.ylabel("Total currents")
 	name="".join(labelx.split())
 	plt.savefig(name)
 	return True
@@ -245,7 +252,7 @@ def orient_magnetic_field(a1,a2,a3,angle):
 #is larger than the given threshold.
 #argument key indicates wether bond distances, width slices or height slices are being measured. Its value must
 #be of "_d", "_w" or "_h" in each respective case.
-def analize_distances(key,mod=True,threshold=0.01,nanoamperes=False):
+def analize_distances(key,mod=True,threshold=0.01,nanoamperes=False, stepponder=1.0,total=False):
 	if nanoamperes:
 		threshold=threshold*nat2au
 	positives=[] #positive currents
@@ -276,9 +283,9 @@ def analize_distances(key,mod=True,threshold=0.01,nanoamperes=False):
 	print "Currents", positives, "\n", negatives, "\n", errors
 	if not founddir:
 		return 9999999
-	parray=np.array(positives) #will be used for plotting
-	narray=np.array(negatives)
-	earray=np.array(errors)
+	parray=np.array(positives)/stepponder #will be used for plotting
+	narray=np.array(negatives)/stepponder
+	earray=np.array(errors)/stepponder
 	#masks for the errors array
 	m = earray==0
 	maskearray=np.ma.masked_array(earray,mask=m) #masked array, only the faulty values are unmasked
@@ -309,7 +316,7 @@ def analize_distances(key,mod=True,threshold=0.01,nanoamperes=False):
 		xlabel = "Width slices"
 	else:
 		xlabel = "Height slices"
-	plot_currents(darray,parray,narray,maskearray,xlabel,nanoamperes)
+	plot_currents(darray,parray,narray,maskearray,xlabel,nanoamperes,total)
 	return dist_smallest
 
 
@@ -318,7 +325,7 @@ def analize_distances(key,mod=True,threshold=0.01,nanoamperes=False):
 #handles plotting of bfields obtained with this same program. In addition, it returns the angle
 #at which (one of the) the minimun value for the positive contribution occurs (which in principle should be used 
 #for calculations). 
-def analize_field(mod=True,threshold=0.01):
+def analize_field(mod=True,threshold=0.01,stepponder=1.0):
 	positives=[] #positive currents
 	negatives=[] 
 	errors=[]  #zeroes when positive+negative<threshold, ==positive otherwise
@@ -342,9 +349,9 @@ def analize_field(mod=True,threshold=0.01):
 			os.chdir("../")
 	if not founddir:
 		return 9999999
-	parray=np.array(positives) #will be used for plotting
-	narray=np.array(negatives)
-	earray=np.array(errors)
+	parray=np.array(positives)/stepponder #will be used for plotting
+	narray=np.array(negatives)/stepponder
+	earray=np.array(errors)/stepponder
 	#masks for the errors array
 	m = earray==0
 	maskearray=np.ma.masked_array(earray,mask=m) #masked array, only the faulty values are unmasked
@@ -361,7 +368,7 @@ def analize_field(mod=True,threshold=0.01):
 #handles plotting of bfields obtained with this same program. In addition, it returns the angle
 #at which (one of the) the minimun value for the positive contribution occurs (which in principle should be used 
 #for calculations).  Is a bit more readable than the old analyze_all
-def analyze_all_pretty(mod, threshold, toanali,refatom,nanoamperes=False):
+def analyze_all_pretty(mod, threshold, toanali,refatom,nanoamperes=False,div=1.0,total=False):
 	for j in toanali:
 		if j=="a_":  #this one is handled rather differently
 			smallest=analize_field(mod,threshold)
@@ -382,7 +389,7 @@ def analyze_all_pretty(mod, threshold, toanali,refatom,nanoamperes=False):
 		else:
 			turn="Distances"
 			search="distance="
-		smallest=analize_distances(j,mod,threshold,nanoamperes)
+		smallest=analize_distances(j,mod,threshold,nanoamperes,div,total)
 		if smallest==9999999: #most likely, the results were not there
 			continue
 		print "Analizing", turn
@@ -527,6 +534,9 @@ parser.add_option("--rlimit", action="store",
 				dest="rlimit", default=5.0,
 				help="right limit for a slice scan. Default 5.0")
 
+parser.add_option("--total", action="store_true",
+				dest="total", default=False,
+				help="Plot total currents together with the negative and positive contributions. Default False")
 
 parser.add_option("-j", "--job-script", action="store",
 				dest="jobscript", default="job.cmd",
@@ -618,8 +628,9 @@ elif options.analyze:
 	else:
 		print "Angles"
 		refatoms=(int(args[0]),int(args[1]),int(args[2]))
-	print options.group, options.nanoamperes
-	analyze_all_pretty(options.module,options.threshold,[options.group],refatoms,options.nanoamperes)
+	div=options.steplen
+	analyze_all_pretty(options.module,options.threshold,[options.group],refatoms,options.nanoamperes,div,options.total)
+	
 	
 
 	
