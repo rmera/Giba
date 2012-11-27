@@ -30,9 +30,9 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import copy
 
-
-
+b2a=0.529177249
 au2nat=28.179409
 nat2au=1.0/au2nat
 
@@ -195,6 +195,11 @@ def local_minimun(l):
 
 
 
+def print_coords(vec1,vec2,symbol):
+	v=(vec1-vec2)*b2a
+	print "{0} {1} {2} {3}".format(symbol, v[0],v[1],v[2])
+	return True
+
 #calculates a vector between paralel to the integration plane and to the plane of the molecule.
 #(angle=0) and paralel to the inegration plane but perpendicular to the molecular plane (angle=pi/2)
 def orient_magnetic_field(a1,a2,a3,angle):
@@ -210,24 +215,28 @@ def orient_magnetic_field(a1,a2,a3,angle):
 		elif cont==a3:
 			temp=i.split()
 			third=np.array([float(temp[0]),float(temp[1]),float(temp[2])])
-		#note that a1, etc are atoms numbers starting from 1 and in the coord file there is one
+		#notice that a1, etc are atoms numbers starting from 1 and in the coord file there is one
 		#unimportant line. Incrementing cont here compensates both facts.
 		cont+=1 
 	if angle<0:
 		stderr.write("Angle must be positive, setting to positive\n")
 		angle=abs(angle)
-	while angle>(np.pi/2.0):
-		sys.stderr.write("Angle must be between 0 and pi/2, setting to pi/2\n") # pi-angle")
-		angle=np.pi/2.0
-		#angle=np.pi-angle
-	coeff=((angle*2.0)/np.pi)
-	#print first, second, third
+#	while angle>(np.pi/2.0):
+#		sys.stderr.write("Angle must be between 0 and pi/2, setting to pi/2\n") # pi-angle")
+#		angle=np.pi/2.0
+#		#angle=np.pi-angle
+	coeff=((2*angle)/np.pi)
+#	print "Points:", first, second, third
 	coord.close()
-	bond=second-first
-	Tvector=np.cross(bond,(third-first))
+	bond=first-second
+	Tvector=np.cross(bond,(third-second))
 	Pvector=np.cross(bond,Tvector)
+	if angle>=np.pi/2:
+		Pvector=-1*Pvector
+		coeff= (2*(np.pi-angle))/np.pi
+#	print "coeff:", coeff, Pvector
 	Finalvec=coeff*Tvector + (1-coeff)*Pvector  
-	Finalvec=Finalvec/np.linalg.norm(Finalvec) #unitarize the vector
+	Finalvec=((Finalvec/np.linalg.norm(Finalvec))+second)*b2a #unitarize, move back, and transofrms to Angstroms 
 	vectorline="magnet=[%4.2f, %4.2f, %4.2f]  \n"%(Finalvec[0],Finalvec[1],Finalvec[2])
 	fin=open("gimic.inp","r")
 	r=fin.readlines()
@@ -241,7 +250,22 @@ def orient_magnetic_field(a1,a2,a3,angle):
 		else:
 			fout.write(i)
 	fout.close()
+	#print "Tvec:", Tvector*0.529177249
+	#
+	#Debug
+	#return Finalvec-second*b2a
+#	z=np.array([0,0,0])
+#	s=copy.copy(second)
+#	print "5"
+#	print "test!"
+#	print_coords(z,z,"O")
+#	print_coords(bond,z,"Cu")
+#	print_coords(third,s,"Ca")
+#	print_coords(Tvector,z,"Ag")
+#	print_coords(Finalvec,z,"Au")
 	return Finalvec
+	
+
 
 	
 				
@@ -325,7 +349,9 @@ def analize_distances(key,mod=True,threshold=0.01,nanoamperes=False, stepponder=
 #handles plotting of bfields obtained with this same program. In addition, it returns the angle
 #at which (one of the) the minimun value for the positive contribution occurs (which in principle should be used 
 #for calculations). 
-def analize_field(mod=True,threshold=0.01,stepponder=1.0):
+def analize_field(mod=True,threshold=0.01,nanoamperes=False, stepponder=1.0,total=False):
+	if nanoamperes:
+		threshold=threshold*nat2au
 	positives=[] #positive currents
 	negatives=[] 
 	errors=[]  #zeroes when positive+negative<threshold, ==positive otherwise
@@ -358,11 +384,12 @@ def analize_field(mod=True,threshold=0.01,stepponder=1.0):
 	smallest=heapq.nsmallest(1,positives) #Look for the smallest value in the positive parts
 	print positives, smallest######################################################################################
 	smallest=positives.index(smallest[0]) #
+	print "Smalest value detected at:", dists[smallest], "value:", positives[smallest]
 	dist_smallest=dists[smallest] #distance of smallest positive current
 	darray=np.array(dists) #for plotting
 	darray=darray
 	xlabel="B-field angle (radians)"
-	plot_currents(darray,parray,narray,maskearray,xlabel)
+	plot_currents(darray,parray,narray,maskearray,xlabel,nanoamperes,total)
 	return dist_smallest
 
 #handles plotting of bfields obtained with this same program. In addition, it returns the angle
@@ -371,7 +398,7 @@ def analize_field(mod=True,threshold=0.01,stepponder=1.0):
 def analyze_all_pretty(mod, threshold, toanali,refatom,nanoamperes=False,div=1.0,total=False):
 	for j in toanali:
 		if j=="a_":  #this one is handled rather differently
-			smallest=analize_field(mod,threshold)
+			smallest=analize_field(mod,threshold, nanoamperes,div,total)
 			if len(refatom)<3:
 				continue
 			if smallest<9999999:
@@ -438,7 +465,8 @@ def add_xyz(newlines,inxyz,outxyz):
 def scan_field(step, command, a1, a2, a3, fake):
 	angle=0.0
 	angleatoms=[]
-	while(angle<=np.pi/2.0):
+	zero="Be     %4.2f   %4.2f   %4.2f\n"%(0.0,0.0,0.0)
+	while(angle<=np.pi):
 		namedir="a_%5.3f"%angle
 		os.mkdir(namedir)
 		shutil.copy("./gimic.inp", namedir)
@@ -448,13 +476,14 @@ def scan_field(step, command, a1, a2, a3, fake):
 		vector=orient_magnetic_field(a1,a2,a3,angle)
 		if not fake:
 			os.system(command)
-		if "integral.xyz" in os.listdir("../"): #help analyze the results
-			fileout="integral%5.3f.xyz"%(angle)
+		if "grid.xyz" in os.listdir("../"): #help analyze the results
+			fileout="grid%5.3f.xyz"%(angle)
 			angleatoms.append("Ca     %4.2f   %4.2f   %4.2f\n"%(vector[0],vector[1],vector[2]))
-			add_xyz([angleatoms[-1]],"../integral.xyz", fileout)		
+			add_xyz([angleatoms[-1],zero],"../grid.xyz", fileout)
 		os.chdir("../")	
 		angle=angle+step
 	fileout="integral_allangles.xyz"
+	angleatoms.append(zero)
 	add_xyz(angleatoms,"./integral.xyz", fileout)
 		
 		
@@ -573,6 +602,8 @@ elif options.jobsystem=="sbatch":
 	print command
 elif options.jobsystem=="qsub":
 	command="qsub "+options.jobscript
+elif options.jobsystem=="dryrun":
+	command="nohup gimic --dryrun > gimic.out &"
 else: 
 	print "Queing system not supported, will not run the executables" #better not to run than to run without queuing
 	command=""
@@ -584,7 +615,7 @@ if options.rundistances:
 
 elif options.runheights:
 	os.system("rm -R h_*")
-	slices("h",options.steplen,options.llimit,options.rlimit, command, options.fake)
+	slices("h",options.steplen,float(options.llimit),float(options.rlimit), command, options.fake)
 
 elif options.runwidth:
 	os.system("rm -R w_*")
@@ -598,9 +629,10 @@ elif options.fieldscan:
 elif options.orient_field:
 	status=orient_magnetic_field(int(args[0]),int(args[1]),int(args[2]), options.angle)
 	if status.any():
-		print "The magnetic field has been set so it is perpendicular to the bond in study",
-		print "(first two parameters) but paralell to the plane of the molecule as defined ",
-		print "by the three atoms given. "
+		print "Angle has been set to", status
+	#	print "The magnetic field has been set so it is perpendicular to the bond in study",
+	#	print "(first two parameters) but paralell to the plane of the molecule as defined ",
+	#	print "by the three atoms given. "
 
 
 
